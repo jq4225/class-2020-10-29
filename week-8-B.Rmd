@@ -23,6 +23,8 @@ Weeks 7, 8 and 9 are the core of the class. We have a question. We have some dat
 
 **Question:** *What would Preceptor's change in attitude toward immigration be if he were to receive the treatment next week?*
 
+Probably more conservative based on Tuesday? Depends on demographics and other stuff we can factor in?
+
 ## Scene 1
 
 **Prompt:** We have not practiced writing mathematical formulas in R markdown documents. Doing so is fairly simple. Bracket the math in one dollar sign if you want it to appear inline. Example: a y in math notation looks like $y$ and is produced with \$y\$. Subscripts require an underscore, and a bracket is often helpful. To make $y_i$ you write  \$y\_i\$. For $x_{t,i}$ write \$x\_{t, i}\$. To put the math on its own line, use two dollar signs. Here is a version of one of the formulas from chapter 8:
@@ -36,17 +38,52 @@ Today, we will be considering `att_chg` as a function of `treatment`.
 
 * Write a few sentences about whether or not our data will allow us to answer this question.
 
+Formula: $attchg_i = \beta_1 * treatment + \epsilon_i$
 
+Preceptor table: Row per person, Two columns indicating attitude w/ and w/o treatment.
+
+We can't construct the ideal preceptor table with our data, but we're able to estimate average treatment effects on ppl who were and weren't treated. We can get averages for what people w/ similar demographics as Preceptor would think.
 
 ## Scene 2
 
 **Prompt:** There are two ways to interpret our question. The first involves our expectation. We can also think of this as the long-term average, if we did the same experiment over and over again. (Assume that Preceptor is always assigned to the treatment.) What is your posterior probability distribution for Preceptor's *expected* `att_chg`?
 
+```{r}
+fit_treat <- stan_glm(att_chg ~ treatment - 1, data = week_8, refresh = 0) %>%
+  as_tibble() %>%
+  select(-sigma)
+
+fit_treat %>%
+  pivot_longer(cols = c("treatmentTreated", "treatmentControl"), names_to = "treatment",
+               values_to = "change") %>%
+  filter(treatment == "treatmentTreated") %>%
+  ggplot(aes(x = change)) +  geom_histogram(alpha = 0.5,
+                                                              bins = 50, color = "white")
+
+fit_treat %>%
+  pivot_longer(cols = c("treatmentTreated", "treatmentControl"), names_to = "treatment",
+               values_to = "change") %>%
+  filter(treatment == "treatmentTreated") %>%
+  summarize(mean = mean(change))
+```
 
 
 ## Scene 3
 
 **Prompt:** The second way to interpret the question is with regard to a single individual. What will happen to Preceptor next week? Provide a Posterior Predictive Distribution for what you predict will be Preceptor's `att_chg` after treatment.
+```{r}
+fit_obj <- stan_glm(att_chg ~ treatment - 1, data = week_8, refresh = 0) 
+
+newobs <- tibble(treatment = "Treated")
+
+pp <- posterior_predict(fit_obj, newdata = newobs) %>%
+  as_tibble()
+
+pp %>%
+  ggplot(aes(x = `1`, y = after_stat(count/sum(count)))) +
+      geom_histogram(color = "white", bins = 50)
+
+```
 
 
 
